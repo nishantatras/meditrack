@@ -1,11 +1,11 @@
 services:
-  # Backend Service (Docker)
+  # Backend Service (Docker) - Free Tier
   - type: web
     name: meditrack-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter
+    plan: free
     region: oregon
     envVars:
       - key: SPRING_PROFILES_ACTIVE
@@ -41,31 +41,31 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         sync: false
 
-  # Frontend Service (Docker)
+  # Frontend Service (Docker) - Free Tier
   - type: web
     name: meditrack-frontend
     runtime: docker
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
-    plan: starter
+    plan: free
     region: oregon
     envVars:
       - key: REACT_APP_API_URL
         sync: false
 
-  # Redis Cache
+  # Redis Cache - Free Tier
   - type: redis
     name: meditrack-redis
-    plan: starter
+    plan: free
     region: oregon
     maxmemoryPolicy: allkeys-lru
     ipAllowList: []
 
 databases:
-  # PostgreSQL Database
+  # PostgreSQL Database - Free Tier
   - name: meditrack-db
     postgresMajorVersion: '15'
-    plan: starter
+    plan: free
     region: oregon
     databaseName: meditrack
     user: meditrack_user
