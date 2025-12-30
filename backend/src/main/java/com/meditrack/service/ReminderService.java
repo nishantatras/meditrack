@@ -25,7 +25,7 @@ public class ReminderService {
 	private final MedicationReminderRepository reminderRepository;
 	private final NotificationService notificationService;
 
-	@Scheduled(fixedRate = 60000) // Run every minute
+	@Scheduled(fixedRate = 10000) // Run every minute
 	@Transactional
 	public void processDueReminders() {
  		processDueReminders(LocalDateTime.now());

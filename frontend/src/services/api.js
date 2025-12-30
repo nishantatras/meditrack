@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {logout as logoutAction} from '../store/slices/authSlice';
 
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
@@ -33,7 +34,9 @@ api.interceptors.request.use(
       token = state?.auth?.token;
     }
     if (!token) {
-      token = localStorage.getItem('token') || localStorage.getItem('meditrack_token');
+      token =
+        localStorage.getItem('token') ||
+        localStorage.getItem('meditrack_token');
     }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -48,12 +51,26 @@ api.interceptors.request.use(
 // Handle responses and errors
 api.interceptors.response.use(
   (response) => {
+    // Check if toast should be suppressed (via config flag)
+    const suppressToast = response.config?.suppressToast === true;
+    const method = response.config?.method?.toUpperCase();
+
     // If response has standardized format, extract data
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      'success' in response.data
+    ) {
       // Standardized ApiResponse format
       if (response.data.success && response.data.data !== undefined) {
-        // Show success toast if message exists
-        if (response.data.message && toastFunctions) {
+        // Only show success toast for POST/PUT/DELETE operations with explicit messages
+        // Skip GET requests and allow components to handle their own toasts
+        if (
+          !suppressToast &&
+          response.data.message &&
+          toastFunctions &&
+          (method === 'POST' || method === 'PUT' || method === 'DELETE')
+        ) {
           toastFunctions.showSuccess(response.data.message);
         }
         // Replace response.data with the actual data for backward compatibility
@@ -69,32 +86,30 @@ api.interceptors.response.use(
             errors: response.data.errors,
           },
         };
-        // Show error toast
-        if (toastFunctions && response.data.message) {
+        // Always show error toasts (unless explicitly suppressed)
+        if (!suppressToast && toastFunctions && response.data.message) {
           toastFunctions.showError(response.data.message);
         }
         return Promise.reject(error);
       }
     } else {
-      // For non-standardized responses, show success for POST/PUT/DELETE
-      const method = response.config?.method?.toUpperCase();
-      if ((method === 'POST' || method === 'PUT' || method === 'DELETE') && toastFunctions) {
-        const messages = {
-          POST: 'Created successfully',
-          PUT: 'Updated successfully',
-          DELETE: 'Deleted successfully',
-        };
-        toastFunctions.showSuccess(messages[method] || 'Operation successful');
-      }
+      // For non-standardized responses, don't show generic success toasts
+      // Components should handle their own success messages
     }
     return response;
   },
   (error) => {
+    // Check if toast should be suppressed
+    const suppressToast = error.config?.suppressToast === true;
+
     // Handle standardized error format
     let errorMessage = 'An error occurred';
-    
+
     if (error.response?.data) {
-      if (typeof error.response.data === 'object' && 'success' in error.response.data) {
+      if (
+        typeof error.response.data === 'object' &&
+        'success' in error.response.data
+      ) {
         if (!error.response.data.success) {
           errorMessage = error.response.data.message || errorMessage;
           error.response.data = {
@@ -110,26 +125,26 @@ api.interceptors.response.use(
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
-    // Show error toast
-    if (toastFunctions) {
+
+    // Show error toast (unless suppressed or it's a 401 which will show its own message)
+    if (!suppressToast && error.response?.status !== 401 && toastFunctions) {
       toastFunctions.showError(errorMessage);
     }
-    
+
     if (error.response?.status === 401) {
       // Clear auth from localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('meditrack_token');
       localStorage.removeItem('meditrack_user');
-      
+
       // Dispatch logout action if Redux store is available
       if (reduxStore) {
-        const {logout} = require('../store/slices/authSlice');
-        reduxStore.dispatch(logout());
+        reduxStore.dispatch(logoutAction());
       }
-      
-      if (toastFunctions) {
+
+      // Only show one toast for 401 errors
+      if (!suppressToast && toastFunctions) {
         toastFunctions.showError('Session expired. Please login again.');
       }
       window.location.href = '/login';
@@ -190,13 +205,34 @@ export const dashboardAPI = {
 export const suggestionAPI = {
   getMedicines: (query) => {
     const params = query ? {query} : {};
-    return api.get('/suggestions/medicines', {params});
+    return api.get('/suggestions/medicines', {params, suppressToast: true});
   },
   getMedicalTests: (query) => {
     const params = query ? {query} : {};
-    return api.get('/suggestions/medical-tests', {params});
+    return api.get('/suggestions/medical-tests', {params, suppressToast: true});
   },
-  getRecordTypes: () => api.get('/suggestions/record-types'),
+  getRecordTypes: () =>
+    api.get('/suggestions/record-types', {suppressToast: true}),
+};
+
+// Helper function to create API calls with suppressed toasts
+export const createApiCallWithSuppressedToast = (apiCall) => {
+  return (...args) => {
+    // If the last argument is a config object, add suppressToast
+    // Otherwise, create a new config
+    const lastArg = args[args.length - 1];
+    if (
+      lastArg &&
+      typeof lastArg === 'object' &&
+      !Array.isArray(lastArg) &&
+      !(lastArg instanceof FormData)
+    ) {
+      args[args.length - 1] = {...lastArg, suppressToast: true};
+    } else {
+      args.push({suppressToast: true});
+    }
+    return apiCall(...args);
+  };
 };
 
 export default api;

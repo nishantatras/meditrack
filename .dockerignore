@@ -1,3 +1,64 @@
-# Ignore everything - we don't want Render to use Docker
-*
+# Git
+.git
+.gitignore
+.gitattributes
 
+# Documentation
+docs/
+*.md
+README.md
+
+# IDE
+.idea
+.vscode
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files (will be set in Render)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts (for backend)
+backend/target/
+backend/.mvn/
+
+# Node modules (for frontend)
+frontend/node_modules/
+frontend/build/
+frontend/.pnp/
+
+# Test files
+**/test/
+**/__tests__/
+**/*.test.js
+**/*.test.ts
+**/*.spec.js
+**/*.spec.ts
+
+# Deployment scripts
+deploy.sh
+fix-render-deploy.sh
+*.sh
+
+# Postman collections
+*.postman_collection.json
+*.postman_environment.json
+
+# Docker files (don't copy docker-compose into containers)
+docker-compose.yml
+docker-compose.*.yml
+
+# Other
+*.backup
+*.bak

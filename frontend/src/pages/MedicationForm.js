@@ -1,7 +1,6 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router-dom';
 import Layout from '../components/Layout';
-import {useToast} from '../context/ToastContext';
 import {medicationAPI, familyMemberAPI, suggestionAPI} from '../services/api';
 
 const MedicationForm = () => {
@@ -15,7 +14,6 @@ const MedicationForm = () => {
   const [medicineSuggestions, setMedicineSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionRef = useRef(null);
-  const {showSuccess, showError} = useToast();
   const [formData, setFormData] = useState({
     familyMemberId: searchParams.get('familyMemberId') || '',
     name: '',
@@ -32,14 +30,17 @@ const MedicationForm = () => {
     if (isEdit) {
       loadMedication();
     }
-    
+
     // Close suggestions when clicking outside
     const handleClickOutside = (event) => {
-      if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
+      if (
+        suggestionRef.current &&
+        !suggestionRef.current.contains(event.target)
+      ) {
         setShowSuggestions(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [id]);
@@ -75,7 +76,7 @@ const MedicationForm = () => {
   const handleChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value});
     setError('');
-    
+
     // Load medicine suggestions when typing in name field
     if (e.target.name === 'name' && e.target.value.length > 0) {
       loadMedicineSuggestions(e.target.value);
@@ -84,7 +85,7 @@ const MedicationForm = () => {
       setShowSuggestions(false);
     }
   };
-  
+
   const loadMedicineSuggestions = async (query) => {
     try {
       const response = await suggestionAPI.getMedicines(query);
@@ -93,7 +94,7 @@ const MedicationForm = () => {
       console.error('Failed to load medicine suggestions', err);
     }
   };
-  
+
   const handleSuggestionClick = (medicine) => {
     setFormData({...formData, name: medicine});
     setShowSuggestions(false);
@@ -114,7 +115,8 @@ const MedicationForm = () => {
       }
       navigate('/medications');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to save medication';
+      const errorMessage =
+        err.response?.data?.message || 'Failed to save medication';
       setError(errorMessage);
       // Error toast will be shown automatically by API interceptor
     } finally {
